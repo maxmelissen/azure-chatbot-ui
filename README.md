@@ -115,12 +115,12 @@ You should be able to start chatting.
 
 When deploying the application, the following environment variables can be set:
 
-| Environment Variable     | Default value                   | Description                                                             |
-|--------------------------|---------------------------------|-------------------------------------------------------------------------|
-| OPENAI_AZURE_API_KEY     |                                 | The API key used for authentication with your Azure OpenAI deployment   |
-| OPENAI_AZURE_API_HOST    |                                 | The host (endpoint + model deployment) for your Azure OpenAI deployment |
-| OPENAI_AZURE_API_VERSION | 2023-03-15-preview              | The API version                                                         |
-| DEFAULT_SYSTEM_PROMPT    | [see here](utils/app/const.ts)  | The defaut system prompt to use on new conversations                    |
+| Environment Variable     | Default value                  | Description                                                             |
+|--------------------------|--------------------------------|-------------------------------------------------------------------------|
+| OPENAI_AZURE_API_KEY     |                                | The API key used for authentication with your Azure OpenAI deployment   |
+| OPENAI_AZURE_API_HOST    |                                | The host (endpoint + model deployment) for your Azure OpenAI deployment |
+| OPENAI_AZURE_API_VERSION | 2023-03-15-preview             | The API version                                                         |
+| DEFAULT_SYSTEM_PROMPT    | [see here](utils/app/const.ts) | The defaut system prompt to use on new conversations                    |
 
 > **Warning**
 > The following functionality is unsupported: If you do not provide an OpenAI API key with `OPENAI_API_KEY`, users will have to provide their own key.
