@@ -1,40 +1,42 @@
-import { Chat } from '@/components/Chat/Chat';
-import { Chatbar } from '@/components/Chatbar/Chatbar';
-import { Navbar } from '@/components/Mobile/Navbar';
-import { Promptbar } from '@/components/Promptbar/Promptbar';
-import { ChatBody, Conversation, Message } from '@/types/chat';
-import { KeyValuePair } from '@/types/data';
-import { ErrorMessage } from '@/types/error';
-import { LatestExportFormat, SupportedExportFormats } from '@/types/export';
-import { Folder, FolderType } from '@/types/folder';
+import {Chat} from '@/components/Chat/Chat';
+import {Chatbar} from '@/components/Chatbar/Chatbar';
+import {Navbar} from '@/components/Mobile/Navbar';
+import {Promptbar} from '@/components/Promptbar/Promptbar';
+import {Conversation, Message} from '@/types/chat';
+import {KeyValuePair} from '@/types/data';
+import {ErrorMessage} from '@/types/error';
+import {LatestExportFormat, SupportedExportFormats} from '@/types/export';
+import {Folder, FolderType} from '@/types/folder';
 import {
   fallbackModelID,
   OpenAIModel,
   OpenAIModelID,
   OpenAIModels,
 } from '@/types/openai';
-import { Prompt } from '@/types/prompt';
+import {Prompt} from '@/types/prompt';
 import {
   cleanConversationHistory,
   cleanSelectedConversation,
 } from '@/utils/app/clean';
-import { DEFAULT_SYSTEM_PROMPT } from '@/utils/app/const';
+import {DEFAULT_SYSTEM_PROMPT} from '@/utils/app/const';
 import {
   saveConversation,
   saveConversations,
   updateConversation,
 } from '@/utils/app/conversation';
-import { saveFolders } from '@/utils/app/folders';
-import { exportData, importData } from '@/utils/app/importExport';
-import { savePrompts } from '@/utils/app/prompts';
-import { IconArrowBarLeft, IconArrowBarRight } from '@tabler/icons-react';
-import { GetServerSideProps } from 'next';
-import { useTranslation } from 'next-i18next';
-import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
+import {saveFolders} from '@/utils/app/folders';
+import {exportData, importData} from '@/utils/app/importExport';
+import {savePrompts} from '@/utils/app/prompts';
+import {IconArrowBarLeft, IconArrowBarRight} from '@tabler/icons-react';
+import {GetServerSideProps} from 'next';
+import {useTranslation} from 'next-i18next';
+import {serverSideTranslations} from 'next-i18next/serverSideTranslations';
 import Head from 'next/head';
-import { useEffect, useRef, useState } from 'react';
-import { v4 as uuidv4 } from 'uuid';
+import {useEffect, useRef, useState} from 'react';
+import {v4 as uuidv4} from 'uuid';
 import toast from 'react-hot-toast';
+
+const USE_STREAM = false;
 
 interface HomeProps {
   serverSideApiKeyIsSet: boolean;
@@ -42,10 +44,10 @@ interface HomeProps {
 }
 
 const Home: React.FC<HomeProps> = ({
-  serverSideApiKeyIsSet,
-  defaultModelId,
-}) => {
-  const { t } = useTranslation('chat');
+                                     serverSideApiKeyIsSet,
+                                     defaultModelId,
+                                   }) => {
+  const {t} = useTranslation('chat');
 
   // STATE ----------------------------------------------
 
@@ -101,22 +103,36 @@ const Home: React.FC<HomeProps> = ({
       setLoading(true);
       setMessageIsStreaming(true);
 
-      const chatBody: ChatBody = {
-        model: updatedConversation.model,
-        messages: updatedConversation.messages,
-        key: apiKey,
-        prompt: updatedConversation.prompt,
-      };
 
       const controller = new AbortController();
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        signal: controller.signal,
-        body: JSON.stringify(chatBody),
-      });
+
+      // const chatBody: ChatBody = {
+      //   model: updatedConversation.model,
+      //   messages: updatedConversation.messages,
+      //   key: apiKey,
+      //   prompt: updatedConversation.prompt,
+      // };
+      // const response = await fetch('/api/chat', {
+      //   method: 'POST',
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //   },
+      //   signal: controller.signal,
+      //   body: JSON.stringify(chatBody),
+      // });
+
+      const lastMessage = updatedConversation.messages[updatedConversation.messages.length - 1].content
+      const response = await fetch(
+        `https://gpt-custom-api.azurewebsites.net/chat`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          signal: controller.signal,
+          body: JSON.stringify({
+            query: lastMessage
+          })
+        })
 
       if (!response.ok) {
         setLoading(false);
@@ -134,7 +150,7 @@ const Home: React.FC<HomeProps> = ({
       }
 
       if (updatedConversation.messages.length === 1) {
-        const { content } = message;
+        const {content} = message;
         const customName =
           content.length > 30 ? content.substring(0, 30) + '...' : content;
 
@@ -146,59 +162,77 @@ const Home: React.FC<HomeProps> = ({
 
       setLoading(false);
 
-      const reader = data.getReader();
-      const decoder = new TextDecoder();
-      let done = false;
-      let isFirst = true;
-      let text = '';
+      if (USE_STREAM) {
+        const reader = data.getReader();
+        const decoder = new TextDecoder();
+        let done = false;
+        let isFirst = true;
+        let text = '';
 
-      while (!done) {
-        if (stopConversationRef.current === true) {
-          controller.abort();
-          done = true;
-          break;
+        while (!done) {
+          if (stopConversationRef.current === true) {
+            controller.abort();
+            done = true;
+            break;
+          }
+
+          const {value, done: doneReading} = await reader.read();
+          done = doneReading;
+          const chunkValue = decoder.decode(value);
+
+          text += chunkValue;
+
+          if (isFirst) {
+            isFirst = false;
+            const updatedMessages: Message[] = [
+              ...updatedConversation.messages,
+              {role: 'assistant', content: chunkValue},
+            ];
+
+            updatedConversation = {
+              ...updatedConversation,
+              messages: updatedMessages,
+            };
+
+            setSelectedConversation(updatedConversation);
+          } else {
+            const updatedMessages: Message[] = updatedConversation.messages.map(
+              (message, index) => {
+                if (index === updatedConversation.messages.length - 1) {
+                  return {
+                    ...message,
+                    content: text,
+                  };
+                }
+
+                return message;
+              },
+            );
+
+            updatedConversation = {
+              ...updatedConversation,
+              messages: updatedMessages,
+            };
+
+            setSelectedConversation(updatedConversation);
+          }
         }
-        const { value, done: doneReading } = await reader.read();
-        done = doneReading;
-        const chunkValue = decoder.decode(value);
+      } else {
+        const json = await response.json();
 
-        text += chunkValue;
+        const updatedMessages: Message[] = [
+          ...updatedConversation.messages,
+          {role: 'assistant', content: json?.answer ?? 'not found'},
+        ];
 
-        if (isFirst) {
-          isFirst = false;
-          const updatedMessages: Message[] = [
-            ...updatedConversation.messages,
-            { role: 'assistant', content: chunkValue },
-          ];
+        updatedConversation = {
+          ...updatedConversation,
+          messages: updatedMessages,
+        };
 
-          updatedConversation = {
-            ...updatedConversation,
-            messages: updatedMessages,
-          };
-
-          setSelectedConversation(updatedConversation);
-        } else {
-          const updatedMessages: Message[] = updatedConversation.messages.map(
-            (message, index) => {
-              if (index === updatedConversation.messages.length - 1) {
-                return {
-                  ...message,
-                  content: text,
-                };
-              }
-
-              return message;
-            },
-          );
-
-          updatedConversation = {
-            ...updatedConversation,
-            messages: updatedMessages,
-          };
-
-          setSelectedConversation(updatedConversation);
-        }
+        setSelectedConversation(updatedConversation);
       }
+
 
       saveConversation(updatedConversation);
 
@@ -223,7 +257,6 @@ const Home: React.FC<HomeProps> = ({
       setMessageIsStreaming(false);
     }
   };
-
   // FETCH MODELS ----------------------------------------------
 
   const fetchModels = async (key: string) => {
@@ -255,7 +288,8 @@ const Home: React.FC<HomeProps> = ({
           code: data.error?.code,
           messageLines: [data.error?.message],
         });
-      } catch (e) {}
+      } catch (e) {
+      }
       setModelError(error);
       return;
     }
@@ -298,7 +332,7 @@ const Home: React.FC<HomeProps> = ({
   };
 
   const handleImportConversations = (data: SupportedExportFormats) => {
-    const { history, folders, prompts }: LatestExportFormat = importData(data);
+    const {history, folders, prompts}: LatestExportFormat = importData(data);
 
     setConversations(history);
     setSelectedConversation(history[history.length - 1]);
@@ -438,7 +472,7 @@ const Home: React.FC<HomeProps> = ({
       [data.key]: data.value,
     };
 
-    const { single, all } = updateConversation(
+    const {single, all} = updateConversation(
       updatedConversation,
       conversations,
     );
@@ -481,7 +515,7 @@ const Home: React.FC<HomeProps> = ({
         messages: updatedMessages,
       };
 
-      const { single, all } = updateConversation(
+      const {single, all} = updateConversation(
         updatedConversation,
         conversations,
       );
@@ -627,12 +661,12 @@ const Home: React.FC<HomeProps> = ({
     <>
       <Head>
         <title>Chatbot UI</title>
-        <meta name="description" content="ChatGPT but better." />
+        <meta name="description" content="ChatGPT but better."/>
         <meta
           name="viewport"
           content="height=device-height ,width=device-width, initial-scale=1, user-scalable=no"
         />
-        <link rel="icon" href="/favicon.ico" />
+        <link rel="icon" href="/favicon.ico"/>
       </Head>
       {selectedConversation && (
         <main
@@ -673,7 +707,7 @@ const Home: React.FC<HomeProps> = ({
                   className="fixed top-5 left-[270px] z-50 h-7 w-7 hover:text-gray-400 dark:text-white dark:hover:text-gray-300 sm:top-0.5 sm:left-[270px] sm:h-8 sm:w-8 sm:text-neutral-700"
                   onClick={handleToggleChatbar}
                 >
-                  <IconArrowBarLeft />
+                  <IconArrowBarLeft/>
                 </button>
                 <div
                   onClick={handleToggleChatbar}
@@ -685,7 +719,7 @@ const Home: React.FC<HomeProps> = ({
                 className="fixed top-2.5 left-4 z-50 h-7 w-7 text-white hover:text-gray-400 dark:text-white dark:hover:text-gray-300 sm:top-0.5 sm:left-4 sm:h-8 sm:w-8 sm:text-neutral-700"
                 onClick={handleToggleChatbar}
               >
-                <IconArrowBarRight />
+                <IconArrowBarRight/>
               </button>
             )}
 
@@ -723,7 +757,7 @@ const Home: React.FC<HomeProps> = ({
                   className="fixed top-5 right-[270px] z-50 h-7 w-7 hover:text-gray-400 dark:text-white dark:hover:text-gray-300 sm:top-0.5 sm:right-[270px] sm:h-8 sm:w-8 sm:text-neutral-700"
                   onClick={handleTogglePromptbar}
                 >
-                  <IconArrowBarRight />
+                  <IconArrowBarRight/>
                 </button>
                 <div
                   onClick={handleTogglePromptbar}
@@ -735,7 +769,7 @@ const Home: React.FC<HomeProps> = ({
                 className="fixed top-2.5 right-4 z-50 h-7 w-7 text-white hover:text-gray-400 dark:text-white dark:hover:text-gray-300 sm:top-0.5 sm:right-4 sm:h-8 sm:w-8 sm:text-neutral-700"
                 onClick={handleTogglePromptbar}
               >
-                <IconArrowBarLeft />
+                <IconArrowBarLeft/>
               </button>
             )}
           </div>
@@ -746,7 +780,7 @@ const Home: React.FC<HomeProps> = ({
 };
 export default Home;
 
-export const getServerSideProps: GetServerSideProps = async ({ locale }) => {
+export const getServerSideProps: GetServerSideProps = async ({locale}) => {
   const defaultModelId =
     (process.env.DEFAULT_MODEL &&
       Object.values(OpenAIModelID).includes(
