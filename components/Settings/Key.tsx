@@ -1,7 +1,7 @@
 import { IconCheck, IconKey, IconX } from '@tabler/icons-react';
 import { useTranslation } from 'next-i18next';
 import { FC, KeyboardEvent, useEffect, useRef, useState } from 'react';
-import { SidebarButton } from '../Sidebar/SidebarButton';
+//import { SidebarButton } from '../Sidebar/SidebarButton';
 
 interface Props {
   apiKey: string;
@@ -31,6 +31,7 @@ export const Key: FC<Props> = ({ apiKey, onApiKeyChange }) => {
       inputRef.current?.focus();
     }
   }, [isChanging]);
+
 
   return isChanging ? (
     <div className="duration:200 flex w-full cursor-pointer items-center rounded-md py-3 px-3 transition-colors hover:bg-gray-500/10">
@@ -67,11 +68,13 @@ export const Key: FC<Props> = ({ apiKey, onApiKeyChange }) => {
         />
       </div>
     </div>
-  ) : (
+  ) : null;
+  {/*(
     <SidebarButton
       text={t('OpenAI API Key')}
       icon={<IconKey size={18} />}
-      onClick={() => setIsChanging(true)}
+      onClick={() => setIsChanging(false)}
     />
   );
+ */}
 };

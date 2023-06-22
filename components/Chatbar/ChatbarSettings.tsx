@@ -36,13 +36,13 @@ export const ChatbarSettings: FC<Props> = ({
       ) : null}
 
       <Import onImport={onImportConversations} />
-
+      {/*
       <SidebarButton
         text={t('Export data')}
         icon={<IconFileExport size={18} />}
         onClick={() => onExportConversations()}
       />
-
+      */}
       <SidebarButton
         text={lightMode === 'light' ? t('Dark mode') : t('Light mode')}
         icon={
