@@ -1,11 +1,12 @@
 import { SupportedExportFormats } from '@/types/export';
-import { IconFileExport, IconMoon, IconSun } from '@tabler/icons-react';
+import { IconLogout, IconMoon, IconSun } from '@tabler/icons-react';
 import { useTranslation } from 'next-i18next';
 import { FC } from 'react';
 import { Import } from '../Settings/Import';
 import { Key } from '../Settings/Key';
 import { SidebarButton } from '../Sidebar/SidebarButton';
 import { ClearConversations } from './ClearConversations';
+import { signOut } from 'next-auth/react';
 
 interface Props {
   lightMode: 'light' | 'dark';
@@ -51,6 +52,12 @@ export const ChatbarSettings: FC<Props> = ({
         onClick={() =>
           onToggleLightMode(lightMode === 'light' ? 'dark' : 'light')
         }
+      />
+
+      <SidebarButton
+        text={t('Logout')}
+        icon={<IconLogout size={18} />}
+        onClick={() => signOut()}
       />
 
       <Key apiKey={apiKey} onApiKeyChange={onApiKeyChange} />
