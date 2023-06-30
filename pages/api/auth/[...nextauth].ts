@@ -1,6 +1,6 @@
 import NextAuth from 'next-auth';
 import AzureADProvider from 'next-auth/providers/azure-ad';
-import { AuthOptions } from 'next-auth/src/core/types';
+import { AuthOptions } from 'next-auth/core/types';
 
 export const authOptions: AuthOptions = {
   providers: [
