@@ -1,4 +1,4 @@
-import { Spinner } from '@/components/Global/Spinner';
+import Spinner from '@/components/Spinner';
 
 export const LoginScreenLoader = (): JSX.Element => {
   return (
