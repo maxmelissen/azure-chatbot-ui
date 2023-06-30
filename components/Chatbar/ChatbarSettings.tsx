@@ -55,9 +55,9 @@ export const ChatbarSettings: FC<Props> = ({
       />
 
       <SidebarButton
-        text={t('Logout')}
+        text={t('Sign out')}
         icon={<IconLogout size={18} />}
-        onClick={() => signOut()}
+        onClick={() => signOut({ callbackUrl: '/' })}
       />
 
       <Key apiKey={apiKey} onApiKeyChange={onApiKeyChange} />
