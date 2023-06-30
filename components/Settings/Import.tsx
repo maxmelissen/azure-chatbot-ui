@@ -1,8 +1,11 @@
-import { SupportedExportFormats } from '@/types/export';
-//import { IconFileImport } from '@tabler/icons-react';
-import { useTranslation } from 'next-i18next';
+import { IconFileImport } from '@tabler/icons-react';
 import { FC } from 'react';
-//import { SidebarButton } from '../Sidebar/SidebarButton';
+
+import { useTranslation } from 'next-i18next';
+
+import { SupportedExportFormats } from '@/types/export';
+
+import { SidebarButton } from '../Sidebar/SidebarButton';
 
 interface Props {
   onImport: (data: SupportedExportFormats) => void;
@@ -30,7 +33,8 @@ export const Import: FC<Props> = ({ onImport }) => {
           reader.readAsText(file);
         }}
       />
-      {/*<SidebarButton
+
+      <SidebarButton
         text={t('Import data')}
         icon={<IconFileImport size={18} />}
         onClick={() => {
@@ -42,7 +46,6 @@ export const Import: FC<Props> = ({ onImport }) => {
           }
         }}
       />
-      */}
     </>
   );
 };
