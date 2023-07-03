@@ -7,7 +7,11 @@ module.exports = {
   ],
   darkMode: 'class',
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        'orange-primary': '#F5AD00',
+      },
+    },
   },
   variants: {
     extend: {

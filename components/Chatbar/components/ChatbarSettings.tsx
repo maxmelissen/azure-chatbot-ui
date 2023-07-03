@@ -1,16 +1,14 @@
-import { IconFileExport, IconMoon, IconSun } from '@tabler/icons-react';
+import {IconLogout, IconMoon, IconSun} from '@tabler/icons-react';
 import { useContext } from 'react';
 
 import { useTranslation } from 'next-i18next';
 
 import HomeContext from '@/pages/api/home/home.context';
 
-import { Import } from '../../Settings/Import';
-import { Key } from '../../Settings/Key';
 import { SidebarButton } from '../../Sidebar/SidebarButton';
 import ChatbarContext from '../Chatbar.context';
 import { ClearConversations } from './ClearConversations';
-import { PluginKeys } from './PluginKeys';
+import {signOut} from "next-auth/react";
 
 export const ChatbarSettings = () => {
   const { t } = useTranslation('sidebar');
@@ -51,6 +49,12 @@ export const ChatbarSettings = () => {
             value: lightMode === 'light' ? 'dark' : 'light',
           })
         }
+      />
+
+      <SidebarButton
+        text={t('Sign out')}
+        icon={<IconLogout size={18} />}
+        onClick={() => signOut({ callbackUrl: '/' })}
       />
     </div>
   );
