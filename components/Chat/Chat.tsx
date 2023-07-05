@@ -38,7 +38,7 @@ interface Props {
   stopConversationRef: MutableRefObject<boolean>;
 }
 
-const USE_STREAM = false
+const USE_STREAM = false;
 
 export const Chat = memo(({ stopConversationRef }: Props) => {
   const { t } = useTranslation('chat');
@@ -100,7 +100,7 @@ export const Chat = memo(({ stopConversationRef }: Props) => {
           messages: updatedConversation.messages,
           key: apiKey,
           prompt: updatedConversation.prompt,
-          temperature: updatedConversation.temperature
+          temperature: updatedConversation.temperature,
         };
         const endpoint = getEndpoint(plugin);
         let body;
@@ -126,18 +126,24 @@ export const Chat = memo(({ stopConversationRef }: Props) => {
         //   signal: controller.signal,
         //   body,
         // });
-        const lastMessage = updatedConversation.messages[updatedConversation.messages.length - 1].content
+        const lastMessage =
+          updatedConversation.messages[updatedConversation.messages.length - 1]
+            .content;
         const response = await fetch(
-        `https://gpt-extention-api.azurewebsites.net/chat`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
+          `http://127.0.0.1:8000/chat`,
+          // `https://gpt-extention-api.azurewebsites.net/chat`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            signal: controller.signal,
+            body: JSON.stringify({
+              query: lastMessage,
+              temperature: updatedConversation.temperature,
+            }),
           },
-          signal: controller.signal,
-          body: JSON.stringify({
-            query: lastMessage
-          })
-        })
+        );
 
         if (!response.ok) {
           homeDispatch({ field: 'loading', value: false });
@@ -219,7 +225,7 @@ export const Chat = memo(({ stopConversationRef }: Props) => {
 
             const updatedMessages: Message[] = [
               ...updatedConversation.messages,
-              {role: 'assistant', content: json?.answer ?? 'not found'},
+              { role: 'assistant', content: json?.answer ?? 'not found' },
             ];
 
             updatedConversation = {
@@ -461,14 +467,14 @@ export const Chat = memo(({ stopConversationRef }: Props) => {
                       />
 
                       <TemperatureSlider
-                          label="Temperature"
-                          onChangeTemperature={(temperature) =>
-                            handleUpdateConversation(selectedConversation, {
-                              key: 'temperature',
-                              value: temperature,
-                            })
-                          }
-                        />
+                        label="Temperature"
+                        onChangeTemperature={(temperature) =>
+                          handleUpdateConversation(selectedConversation, {
+                            key: 'temperature',
+                            value: temperature,
+                          })
+                        }
+                      />
                     </div>
                   )}
                 </div>
