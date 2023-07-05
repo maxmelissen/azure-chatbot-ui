@@ -130,8 +130,7 @@ export const Chat = memo(({ stopConversationRef }: Props) => {
           updatedConversation.messages[updatedConversation.messages.length - 1]
             .content;
         const response = await fetch(
-          `http://127.0.0.1:8000/chat`,
-          // `https://gpt-extention-api.azurewebsites.net/chat`,
+          `https://gpt-extention-api.azurewebsites.net/chat`,
           {
             method: 'POST',
             headers: {
