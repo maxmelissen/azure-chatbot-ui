@@ -38,7 +38,7 @@ interface Props {
   stopConversationRef: MutableRefObject<boolean>;
 }
 
-const USE_STREAM = false;
+const USE_STREAM = true;
 
 export const Chat = memo(({ stopConversationRef }: Props) => {
   const { t } = useTranslation('chat');
@@ -130,11 +130,13 @@ export const Chat = memo(({ stopConversationRef }: Props) => {
           updatedConversation.messages[updatedConversation.messages.length - 1]
             .content;
         const response = await fetch(
-          `https://gpt-extention-api.azurewebsites.net/chat`,
+          // `https://gpt-extention-api.azurewebsites.net/chat`,
+          `http://localhost:8000/chat`,
           {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
+              Accept: 'text/event-stream',
             },
             signal: controller.signal,
             body: JSON.stringify({
