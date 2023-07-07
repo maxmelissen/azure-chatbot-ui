@@ -1,6 +1,6 @@
 import NextAuth from 'next-auth';
-import AzureADProvider from 'next-auth/providers/azure-ad';
 import { AuthOptions } from 'next-auth/core/types';
+import AzureADProvider from 'next-auth/providers/azure-ad';
 
 export const authOptions: AuthOptions = {
   providers: [
@@ -23,13 +23,13 @@ export const authOptions: AuthOptions = {
     async signIn({ user }) {
       const allowedDomains = (process.env.AZURE_AD_ALLOWED_DOMAINS ?? '')
         .split(',')
-        .map((domain) => domain.trim());
+        .map((domain) => domain.trim().toLowerCase());
 
       if (!user.email || !allowedDomains.length) {
         return false;
       }
 
-      const emailDomain = user.email.split('@')[1];
+      const emailDomain = user.email.toLowerCase().split('@')[1];
 
       return allowedDomains.includes(emailDomain);
     },

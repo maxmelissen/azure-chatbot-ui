@@ -13,6 +13,7 @@ import toast from 'react-hot-toast';
 import { useTranslation } from 'next-i18next';
 
 import { getEndpoint } from '@/utils/app/api';
+import { OPENAI_API_HOST_CUSTOM } from '@/utils/app/const';
 import {
   saveConversation,
   saveConversations,
@@ -37,8 +38,6 @@ import { TemperatureSlider } from './Temperature';
 interface Props {
   stopConversationRef: MutableRefObject<boolean>;
 }
-
-const USE_STREAM = true;
 
 export const Chat = memo(({ stopConversationRef }: Props) => {
   const { t } = useTranslation('chat');
@@ -102,8 +101,31 @@ export const Chat = memo(({ stopConversationRef }: Props) => {
           prompt: updatedConversation.prompt,
           temperature: updatedConversation.temperature,
         };
+
+        const controller = new AbortController();
         const endpoint = getEndpoint(plugin);
         let body;
+        let response;
+
+        if (!plugin && !!OPENAI_API_HOST_CUSTOM) {
+          const lastMessage =
+            updatedConversation.messages[
+              updatedConversation.messages.length - 1
+            ].content;
+          response = await fetch(`${OPENAI_API_HOST_CUSTOM}/chat`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'text/event-stream',
+            },
+            signal: controller.signal,
+            body: JSON.stringify({
+              query: lastMessage,
+              temperature: updatedConversation.temperature,
+            }),
+          });
+        }
+
         if (!plugin) {
           body = JSON.stringify(chatBody);
         } else {
@@ -117,34 +139,17 @@ export const Chat = memo(({ stopConversationRef }: Props) => {
               ?.requiredKeys.find((key) => key.key === 'GOOGLE_CSE_ID')?.value,
           });
         }
-        const controller = new AbortController();
-        // const response = await fetch(endpoint, {
-        //   method: 'POST',
-        //   headers: {
-        //     'Content-Type': 'application/json',
-        //   },
-        //   signal: controller.signal,
-        //   body,
-        // });
-        const lastMessage =
-          updatedConversation.messages[updatedConversation.messages.length - 1]
-            .content;
-        const response = await fetch(
-          // `https://gpt-extention-api.azurewebsites.net/chat`,
-          `http://localhost:8000/chat`,
-          {
+
+        if (!response) {
+          response = await fetch(endpoint, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              Accept: 'text/event-stream',
             },
             signal: controller.signal,
-            body: JSON.stringify({
-              query: lastMessage,
-              temperature: updatedConversation.temperature,
-            }),
-          },
-        );
+            body,
+          });
+        }
 
         if (!response.ok) {
           homeDispatch({ field: 'loading', value: false });
@@ -169,77 +174,56 @@ export const Chat = memo(({ stopConversationRef }: Props) => {
             };
           }
           homeDispatch({ field: 'loading', value: false });
-
-          if (USE_STREAM) {
-            const reader = data.getReader();
-            const decoder = new TextDecoder();
-            let done = false;
-            let isFirst = true;
-            let text = '';
-            while (!done) {
-              if (stopConversationRef.current === true) {
-                controller.abort();
-                done = true;
-                break;
-              }
-              const { value, done: doneReading } = await reader.read();
-              done = doneReading;
-              const chunkValue = decoder.decode(value);
-              text += chunkValue;
-              if (isFirst) {
-                isFirst = false;
-                const updatedMessages: Message[] = [
-                  ...updatedConversation.messages,
-                  { role: 'assistant', content: chunkValue },
-                ];
-                updatedConversation = {
-                  ...updatedConversation,
-                  messages: updatedMessages,
-                };
-                homeDispatch({
-                  field: 'selectedConversation',
-                  value: updatedConversation,
-                });
-              } else {
-                const updatedMessages: Message[] =
-                  updatedConversation.messages.map((message, index) => {
-                    if (index === updatedConversation.messages.length - 1) {
-                      return {
-                        ...message,
-                        content: text,
-                      };
-                    }
-                    return message;
-                  });
-                updatedConversation = {
-                  ...updatedConversation,
-                  messages: updatedMessages,
-                };
-                homeDispatch({
-                  field: 'selectedConversation',
-                  value: updatedConversation,
-                });
-              }
+          const reader = data.getReader();
+          const decoder = new TextDecoder();
+          let done = false;
+          let isFirst = true;
+          let text = '';
+          while (!done) {
+            if (stopConversationRef.current === true) {
+              controller.abort();
+              done = true;
+              break;
             }
-          } else {
-            const json = await response.json();
-
-            const updatedMessages: Message[] = [
-              ...updatedConversation.messages,
-              { role: 'assistant', content: json?.answer ?? 'not found' },
-            ];
-
-            updatedConversation = {
-              ...updatedConversation,
-              messages: updatedMessages,
-            };
-
-            homeDispatch({
-              field: 'selectedConversation',
-              value: updatedConversation,
-            });
+            const { value, done: doneReading } = await reader.read();
+            done = doneReading;
+            const chunkValue = decoder.decode(value);
+            text += chunkValue;
+            if (isFirst) {
+              isFirst = false;
+              const updatedMessages: Message[] = [
+                ...updatedConversation.messages,
+                { role: 'assistant', content: chunkValue },
+              ];
+              updatedConversation = {
+                ...updatedConversation,
+                messages: updatedMessages,
+              };
+              homeDispatch({
+                field: 'selectedConversation',
+                value: updatedConversation,
+              });
+            } else {
+              const updatedMessages: Message[] =
+                updatedConversation.messages.map((message, index) => {
+                  if (index === updatedConversation.messages.length - 1) {
+                    return {
+                      ...message,
+                      content: text,
+                    };
+                  }
+                  return message;
+                });
+              updatedConversation = {
+                ...updatedConversation,
+                messages: updatedMessages,
+              };
+              homeDispatch({
+                field: 'selectedConversation',
+                value: updatedConversation,
+              });
+            }
           }
-
           saveConversation(updatedConversation);
           const updatedConversations: Conversation[] = conversations.map(
             (conversation) => {
@@ -456,16 +440,18 @@ export const Chat = memo(({ stopConversationRef }: Props) => {
                     <div className="flex h-full flex-col space-y-4 rounded-lg border border-neutral-200 p-4 dark:border-neutral-600">
                       <ModelSelect />
 
-                      <SystemPrompt
-                        conversation={selectedConversation}
-                        prompts={prompts}
-                        onChangePrompt={(prompt) =>
-                          handleUpdateConversation(selectedConversation, {
-                            key: 'prompt',
-                            value: prompt,
-                          })
-                        }
-                      />
+                      {!OPENAI_API_HOST_CUSTOM && (
+                        <SystemPrompt
+                          conversation={selectedConversation}
+                          prompts={prompts}
+                          onChangePrompt={(prompt) =>
+                            handleUpdateConversation(selectedConversation, {
+                              key: 'prompt',
+                              value: prompt,
+                            })
+                          }
+                        />
+                      )}
 
                       <TemperatureSlider
                         label="Temperature"
