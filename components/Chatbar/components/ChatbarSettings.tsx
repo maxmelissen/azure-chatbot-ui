@@ -1,14 +1,16 @@
-import {IconLogout, IconMoon, IconSun} from '@tabler/icons-react';
+import { IconLogout, IconMoon, IconSun } from '@tabler/icons-react';
+import { signOut } from 'next-auth/react';
 import { useContext } from 'react';
 
 import { useTranslation } from 'next-i18next';
+
+import { SKIP_AUTH } from '@/utils/app/const';
 
 import HomeContext from '@/pages/api/home/home.context';
 
 import { SidebarButton } from '../../Sidebar/SidebarButton';
 import ChatbarContext from '../Chatbar.context';
 import { ClearConversations } from './ClearConversations';
-import {signOut} from "next-auth/react";
 
 export const ChatbarSettings = () => {
   const { t } = useTranslation('sidebar');
@@ -51,11 +53,13 @@ export const ChatbarSettings = () => {
         }
       />
 
-      <SidebarButton
-        text={t('Sign out')}
-        icon={<IconLogout size={18} />}
-        onClick={() => signOut({ callbackUrl: '/' })}
-      />
+      {!SKIP_AUTH && (
+        <SidebarButton
+          text={t('Sign out')}
+          icon={<IconLogout size={18} />}
+          onClick={() => signOut({ callbackUrl: '/' })}
+        />
+      )}
     </div>
   );
 };
