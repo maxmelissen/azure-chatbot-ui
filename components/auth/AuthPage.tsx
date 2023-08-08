@@ -1,6 +1,9 @@
 import { useSession } from 'next-auth/react';
-import { LoginScreenLoader } from '@/components/auth/LoginScreenLoader';
+
+import { SKIP_AUTH } from '@/utils/app/const';
+
 import { LoginScreen } from '@/components/auth/LoginScreen';
+import { LoginScreenLoader } from '@/components/auth/LoginScreenLoader';
 
 type AuthPageProps = {
   children: JSX.Element;
@@ -9,7 +12,7 @@ type AuthPageProps = {
 export const AuthPage = ({ children }: AuthPageProps) => {
   const { status } = useSession();
 
-  if (status === 'authenticated') {
+  if (status === 'authenticated' || SKIP_AUTH) {
     return children;
   }
 

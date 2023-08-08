@@ -13,6 +13,7 @@ import toast from 'react-hot-toast';
 import { useTranslation } from 'next-i18next';
 
 import { getEndpoint } from '@/utils/app/api';
+import { OPENAI_API_HOST_CUSTOM } from '@/utils/app/const';
 import {
   saveConversation,
   saveConversations,
@@ -98,10 +99,33 @@ export const Chat = memo(({ stopConversationRef }: Props) => {
           messages: updatedConversation.messages,
           key: apiKey,
           prompt: updatedConversation.prompt,
-          temperature: updatedConversation.temperature
+          temperature: updatedConversation.temperature,
         };
+
+        const controller = new AbortController();
         const endpoint = getEndpoint(plugin);
         let body;
+        let response;
+
+        if (!plugin && !!OPENAI_API_HOST_CUSTOM) {
+          const lastMessage =
+            updatedConversation.messages[
+              updatedConversation.messages.length - 1
+            ].content;
+          response = await fetch(`${OPENAI_API_HOST_CUSTOM}/chat`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'text/event-stream',
+            },
+            signal: controller.signal,
+            body: JSON.stringify({
+              query: lastMessage,
+              temperature: updatedConversation.temperature,
+            }),
+          });
+        }
+
         if (!plugin) {
           body = JSON.stringify(chatBody);
         } else {
@@ -115,15 +139,18 @@ export const Chat = memo(({ stopConversationRef }: Props) => {
               ?.requiredKeys.find((key) => key.key === 'GOOGLE_CSE_ID')?.value,
           });
         }
-        const controller = new AbortController();
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          signal: controller.signal,
-          body,
-        });
+
+        if (!response) {
+          response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            signal: controller.signal,
+            body,
+          });
+        }
+
         if (!response.ok) {
           homeDispatch({ field: 'loading', value: false });
           homeDispatch({ field: 'messageIsStreaming', value: false });
@@ -413,26 +440,28 @@ export const Chat = memo(({ stopConversationRef }: Props) => {
                     <div className="flex h-full flex-col space-y-4 rounded-lg border border-neutral-200 p-4 dark:border-neutral-600">
                       <ModelSelect />
 
-                      <SystemPrompt
-                        conversation={selectedConversation}
-                        prompts={prompts}
-                        onChangePrompt={(prompt) =>
-                          handleUpdateConversation(selectedConversation, {
-                            key: 'prompt',
-                            value: prompt,
-                          })
-                        }
-                      />
-
-                      <TemperatureSlider
-                          label="Temperature"
-                          onChangeTemperature={(temperature) =>
+                      {!OPENAI_API_HOST_CUSTOM && (
+                        <SystemPrompt
+                          conversation={selectedConversation}
+                          prompts={prompts}
+                          onChangePrompt={(prompt) =>
                             handleUpdateConversation(selectedConversation, {
-                              key: 'temperature',
-                              value: temperature,
+                              key: 'prompt',
+                              value: prompt,
                             })
                           }
                         />
+                      )}
+
+                      <TemperatureSlider
+                        label="Temperature"
+                        onChangeTemperature={(temperature) =>
+                          handleUpdateConversation(selectedConversation, {
+                            key: 'temperature',
+                            value: temperature,
+                          })
+                        }
+                      />
                     </div>
                   )}
                 </div>
